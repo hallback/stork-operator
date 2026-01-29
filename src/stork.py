@@ -10,7 +10,7 @@ import logging
 import subprocess
 
 from charmlibs import apt
-from charms.operator_libs_linux.v1.systemd import service_restart, service_enable
+from charms.operator_libs_linux.v1.systemd import service_restart, service_enable, service_running
 from jinja2 import Environment, FileSystemLoader
 
 logger = logging.getLogger(__name__)
@@ -34,15 +34,30 @@ def install() -> None:
 
 def start() -> None:
     """Start the workload (by running a commamd, for example)."""
-    # You'll need to implement this function.
-    # Ideally, this function should only return once the workload is ready to use.
-
+    # We do not start isc-stork-server here, we let systemd handle it
+    # once the configuration is rendered.
 
 def get_version() -> str | None:
     """Get the running version of the workload."""
-    # You'll need to implement this function (or remove it if not needed).
+    # If we can't get the version, it is assumed the software isn't installed
+    try:
+        cmd = ["stork-server", "--version"]
+        sp = subprocess.run(cmd, check=True, capture_output=True, encoding="utf-8")
+        logger.info(f"stork.get_version()): got version: {sp.stdout}")
+        # Remove trailing newline
+        return sp.stdout.rstrip()
+    except Exception as e:
+        logger.warning(f"stork.get_version()): Failed to get version: {e}")
+        return None
+
     return None
 
+def get_status() -> str:
+    return "This is the default normal status"
+
+def is_running() -> bool:
+    """Let systemd determine if the service is running"""
+    return service_running("isc-stork-server")
 
 def db_init(dbconn) -> int:
     """Initialize the database"""
@@ -65,7 +80,7 @@ def db_init(dbconn) -> int:
     return 0
 
 def render_and_reload(dbconn) -> int:
-    # This should later only reload on actual config change
+    # TODO: This should later only reload on actual config change
     env = Environment(loader=FileSystemLoader("templates"),
             keep_trailing_newline=True, trim_blocks=False)
     stork_server_env_tmpl = env.get_template("server.env.j2")
@@ -81,4 +96,5 @@ def render_and_reload(dbconn) -> int:
         file.write(stork_server_env)
 
     # reload/restart in some way here
+    service_enable("isc-stork-server")
     service_restart("isc-stork-server")

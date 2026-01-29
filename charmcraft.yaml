@@ -56,6 +56,10 @@ requires:
     interface: postgresql_client
     limit: 1
 
+provides:
+  stork:
+    interface: stork_agent
+
 # Adding this must be followed by "charmcraft fetch-libs", see:
 # https://documentation.ubuntu.com/ops/latest/tutorial/from-zero-to-hero-write-your-first-kubernetes-charm/integrate-your-charm-with-postgresql/
 charm-libs:
